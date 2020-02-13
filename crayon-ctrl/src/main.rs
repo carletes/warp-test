@@ -7,14 +7,8 @@ async fn main() {
     // GET /health => Empty 200 response.
     let health = warp::get().and(warp::path("health").map(|| "").and(warp::path::end()));
 
-    // POST /links {JSON body} => Empty response.
-    let links_create = warp::post()
-        .and(warp::path::end())
-        .and(warp::body::json())
-        .map(|_body: String| "");
-
     let links = warp::path("links").and(
-        links_create
+        links::create()
             .or(links::detail())
             .or(links::list())
             .or(links::modify()),
@@ -27,19 +21,27 @@ async fn main() {
 mod links {
     use warp::{Filter, Rejection, Reply};
 
-    // GET /links => JSON list of links
+    /// GET /links => JSON list of links
     pub fn list() -> impl Filter<Extract = impl Reply, Error = Rejection> + Copy {
         warp::get().and(warp::path::end()).map(|| "[1, 2, 3]")
     }
 
-    // GET /links/<name> => JSON object or 404.
+    /// GET /links/<name> => JSON object or 404.
     pub fn detail() -> impl Filter<Extract = (String,), Error = Rejection> + Copy {
         warp::get()
             .and(warp::path::param().and(warp::path::end()))
             .map(|name: String| format!("id: {}", name))
     }
 
-    // PATCH /links/<name> {JSON body} => JSON object or 404.
+    /// POST /links {JSON body} => Empty response.
+    pub fn create() -> impl Filter<Extract = impl Reply, Error = Rejection> + Copy {
+        warp::post()
+            .and(warp::path::end())
+            .and(warp::body::json())
+            .map(|_body: String| "")
+    }
+
+    /// PATCH /links/<name> {JSON body} => JSON object or 404.
     pub fn modify() -> impl Filter<Extract = impl Reply, Error = Rejection> + Copy {
         warp::patch()
             .and(warp::path::param().and(warp::path::end()))
