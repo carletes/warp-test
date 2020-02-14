@@ -7,4 +7,5 @@ edition = "2018"
 [dependencies]
 tokio = { "version" = "0.2.11", features = ["full"] }
 env_logger = { "version" = "0.7.1" }
+nix = { version = "0.17" }
 warp = { "version" = "0.2.1" }

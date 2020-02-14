@@ -1,3 +1,5 @@
+use nix::ifaddrs::getifaddrs;
+
 #[derive(Clone, Debug)]
 pub struct Interface {
     pub name: String,
@@ -6,7 +8,7 @@ pub struct Interface {
 }
 
 pub trait Interfaces {
-    fn all(&self) -> Vec<Interface>;
+    fn all(&self) -> Result<Vec<Interface>, String>;
     fn create(&mut self, name: &str) -> Result<Interface, String>;
     fn delete(&mut self, name: &str) -> Result<bool, String>;
     fn get(&self, name: &str) -> Result<Option<Interface>, String>;
@@ -16,8 +18,17 @@ pub trait Interfaces {
 pub struct SystemInterfaces {}
 
 impl Interfaces for SystemInterfaces {
-    fn all(&self) -> Vec<Interface> {
-        Vec::new()
+    fn all(&self) -> Result<Vec<Interface>, String> {
+        match getifaddrs() {
+            Ok(addrs) => Ok(addrs
+                .map(|addr| Interface {
+                    name: addr.interface_name,
+                    addr: "127.0.0.1".to_string(),
+                    prefix: 8,
+                })
+                .collect()),
+            Err(err) => Err(format!("getifaddrs() failed: {}", err)),
+        }
     }
 
     fn create(&mut self, name: &str) -> Result<Interface, String> {
@@ -29,7 +40,21 @@ impl Interfaces for SystemInterfaces {
     }
 
     fn get(&self, name: &str) -> Result<Option<Interface>, String> {
-        Err(format!("TODO: ip show {:?}", name))
+        match getifaddrs() {
+            Ok(addrs) => {
+                for ifaddr in addrs {
+                    if ifaddr.interface_name == name {
+                        return Ok(Some(Interface {
+                            name: ifaddr.interface_name,
+                            addr: "127.0.0.1".to_string(),
+                            prefix: 8,
+                        }));
+                    }
+                }
+                Ok(None)
+            }
+            Err(err) => Err(format!("getifaddrs() failed: {}", err)),
+        }
     }
 
     fn modify(&self, iface: Interface) -> Result<bool, String> {
