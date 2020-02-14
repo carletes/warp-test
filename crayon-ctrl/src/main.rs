@@ -1,6 +1,7 @@
 use warp::Filter;
 
-mod links;
+mod filters;
+mod models;
 
 #[tokio::main]
 async fn main() {
@@ -10,10 +11,10 @@ async fn main() {
     let health = warp::get().and(warp::path("health").map(|| "").and(warp::path::end()));
 
     let links = warp::path("links").and(
-        links::create()
-            .or(links::detail())
-            .or(links::list())
-            .or(links::modify()),
+        filters::links::create()
+            .or(filters::links::detail())
+            .or(filters::links::list())
+            .or(filters::links::modify()),
     );
 
     let routes = health.or(links);
