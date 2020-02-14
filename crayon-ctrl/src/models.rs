@@ -4,7 +4,7 @@ use nix::ifaddrs::getifaddrs;
 pub struct Interface {
     pub name: String,
     pub addr: String,
-    pub prefix: u8,
+    pub netmask: String,
 }
 
 pub trait Interfaces {
@@ -24,7 +24,7 @@ impl Interfaces for SystemInterfaces {
                 .map(|addr| Interface {
                     name: addr.interface_name,
                     addr: "127.0.0.1".to_string(),
-                    prefix: 8,
+                    netmask: "255.0.0.0".to_string(),
                 })
                 .collect()),
             Err(err) => Err(format!("getifaddrs() failed: {}", err)),
@@ -44,11 +44,21 @@ impl Interfaces for SystemInterfaces {
             Ok(addrs) => {
                 for ifaddr in addrs {
                     if ifaddr.interface_name == name {
-                        return Ok(Some(Interface {
-                            name: ifaddr.interface_name,
-                            addr: "127.0.0.1".to_string(),
-                            prefix: 8,
-                        }));
+                        match (ifaddr.address, ifaddr.netmask) {
+                            (Some(address), Some(netmask)) => {
+                                return Ok(Some(Interface {
+                                    name: ifaddr.interface_name,
+                                    addr: address.to_string(),
+                                    netmask: netmask.to_str(),
+                                }))
+                            }
+                            (_, _) => {
+                                return Err(format!(
+                                    "Unknown type of address/netmask for interface {}",
+                                    name
+                                ))
+                            }
+                        }
                     }
                 }
                 Ok(None)

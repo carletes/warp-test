@@ -74,13 +74,13 @@ mod tests {
     }
 
     impl Interfaces for MockInterfaces {
-        fn all(&self) -> Vec<Interface> {
+        fn all(&self) -> Result<Vec<Interface>, String> {
             let mut ret = Vec::with_capacity(self.ifaces.len());
 
             for iface in self.ifaces.values() {
                 ret.push(iface.clone());
             }
-            ret
+            Ok(ret)
         }
 
         fn create(&mut self, name: &str) -> Result<Interface, String> {
@@ -91,7 +91,7 @@ mod tests {
                 let iface = Interface {
                     name: k.clone(),
                     addr: "127.0.0.1".to_string(),
-                    prefix: 8,
+                    netmask: "255.0.0.0".to_string(),
                 };
                 let ret = iface.clone();
                 self.ifaces.insert(k, iface);
