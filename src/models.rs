@@ -82,6 +82,8 @@ pub mod test {
     use super::{Interface, Interfaces};
     use std::cell::RefCell;
     use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
 
     struct MockInterfaces {
         ifaces: RefCell<HashMap<String, Interface>>,
@@ -126,8 +128,6 @@ pub mod test {
             Err(format!("TODO: ip link modify {:?}", iface))
         }
     }
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
 
     pub fn interfaces() -> Arc<Mutex<impl Interfaces>> {
         Arc::new(Mutex::new(MockInterfaces {
