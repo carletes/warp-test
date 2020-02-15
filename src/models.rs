@@ -126,10 +126,12 @@ pub mod test {
             Err(format!("TODO: ip link modify {:?}", iface))
         }
     }
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
 
-    pub fn interfaces() -> Box<dyn Interfaces> {
-        Box::new(MockInterfaces {
+    pub fn interfaces() -> Arc<Mutex<impl Interfaces>> {
+        Arc::new(Mutex::new(MockInterfaces {
             ifaces: RefCell::new(HashMap::with_capacity(10)),
-        })
+        }))
     }
 }
