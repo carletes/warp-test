@@ -2,9 +2,9 @@ use nix::ifaddrs::getifaddrs;
 
 #[derive(Clone, Debug)]
 pub struct Interface {
-    pub name: String,
-    pub addr: String,
-    pub netmask: String,
+    name: String,
+    addr: String,
+    netmask: String,
 }
 
 pub trait Interfaces {
@@ -69,5 +69,67 @@ impl Interfaces for SystemInterfaces {
 
     fn modify(&self, iface: Interface) -> Result<bool, String> {
         Err(format!("TODO: ip link modify {:?}", iface))
+    }
+}
+
+pub mod test {
+    use super::{Interface, Interfaces};
+    use std::collections::HashMap;
+
+    pub struct MockInterfaces {
+        ifaces: HashMap<String, Interface>,
+    }
+
+    impl MockInterfaces {
+        pub fn new() -> MockInterfaces {
+            MockInterfaces {
+                ifaces: HashMap::with_capacity(10),
+            }
+        }
+    }
+
+    impl Interfaces for MockInterfaces {
+        fn all(&self) -> Result<Vec<Interface>, String> {
+            let mut ret = Vec::with_capacity(self.ifaces.len());
+
+            for iface in self.ifaces.values() {
+                ret.push(iface.clone());
+            }
+            Ok(ret)
+        }
+
+        fn create(&mut self, name: &str) -> Result<Interface, String> {
+            if self.ifaces.contains_key(name) {
+                Err(format!("{}: Already exists", name))
+            } else {
+                let k = String::from(name);
+                let iface = Interface {
+                    name: k.clone(),
+                    addr: "127.0.0.1".to_string(),
+                    netmask: "255.0.0.0".to_string(),
+                };
+                let ret = iface.clone();
+                self.ifaces.insert(k, iface);
+                Ok(ret)
+            }
+        }
+
+        fn delete(&mut self, name: &str) -> Result<bool, String> {
+            match self.ifaces.remove(name) {
+                Some(_) => Ok(true),
+                None => Ok(false),
+            }
+        }
+
+        fn get(&self, name: &str) -> Result<Option<Interface>, String> {
+            match self.ifaces.get(name) {
+                Some(iface) => Ok(Some(iface.clone())),
+                None => Ok(None),
+            }
+        }
+
+        fn modify(&self, iface: Interface) -> Result<bool, String> {
+            Err(format!("TODO: ip link modify {:?}", iface))
+        }
     }
 }
