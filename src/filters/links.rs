@@ -3,8 +3,8 @@ use crate::models::Interfaces;
 use warp::{Filter, Rejection, Reply};
 
 // GET /links => JSON list of links
-pub fn list<T: Interfaces + Send>(
-    ifaces: Arc<Mutex<T>>,
+pub fn list(
+    ifaces: Arc<Mutex<impl Interfaces + Send>>,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::get()
         .and(warp::path::end())
@@ -100,22 +100,7 @@ mod tests {
             .await;
 
         assert_eq!(res.status(), 200);
-        assert_eq!(res.body(), "Ok([]");
-    }
-
-    #[tokio::test]
-    async fn test_list_after_create() {
-        let ifaces = test::interfaces();
-        let f = list(ifaces);
-
-        let res = warp::test::request()
-            .method("GET")
-            .path("/")
-            .reply(&f)
-            .await;
-
-        assert_eq!(res.status(), 200);
-        assert_eq!(res.body(), "Ok([]");
+        assert_eq!(res.body(), "Ok([])");
     }
 
     #[tokio::test]
