@@ -1,5 +1,8 @@
 use crate::handlers::interfaces;
 use crate::models::Interfaces;
+use std::convert::Infallible;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use warp::{Filter, Rejection, Reply};
 
 // GET /links => JSON list of links
@@ -34,14 +37,6 @@ pub fn modify() -> impl Filter<Extract = impl Reply, Error = Rejection> + Copy {
         .and(warp::body::json())
         .map(|_name: String, _body: String| "")
 }
-
-// fn with_db(db: Db) -> impl Filter<Extract = (Db,), Error = std::convert::Infallible> + Clone {
-//     warp::any().map(move || db.clone())
-// }
-
-use std::convert::Infallible;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 fn with_ifaces<T: Interfaces + Send>(
     ifaces: Arc<Mutex<T>>,
