@@ -10,6 +10,8 @@ async fn main() {
     // GET /health => Empty 200 response.
     let health = warp::get().and(warp::path("health").map(|| "").and(warp::path::end()));
 
+    let ifaces = models::SystemInterfaces::new();
+
     let links = warp::path("links").and(
         filters::links::create()
             .or(filters::links::detail())

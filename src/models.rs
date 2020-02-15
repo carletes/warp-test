@@ -17,6 +17,12 @@ pub trait Interfaces {
 
 pub struct SystemInterfaces {}
 
+impl SystemInterfaces {
+    pub fn new() -> SystemInterfaces {
+        SystemInterfaces {}
+    }
+}
+
 impl Interfaces for SystemInterfaces {
     fn all(&self) -> Result<Vec<Interface>, String> {
         match getifaddrs() {
@@ -90,12 +96,7 @@ pub mod test {
 
     impl Interfaces for MockInterfaces {
         fn all(&self) -> Result<Vec<Interface>, String> {
-            let mut ret = Vec::with_capacity(self.ifaces.len());
-
-            for iface in self.ifaces.values() {
-                ret.push(iface.clone());
-            }
-            Ok(ret)
+            Ok(self.ifaces.values().cloned().collect())
         }
 
         fn create(&mut self, name: &str) -> Result<Interface, String> {
