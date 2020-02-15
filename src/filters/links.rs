@@ -31,6 +31,42 @@ pub fn modify() -> impl Filter<Extract = impl Reply, Error = Rejection> + Copy {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::test::MockInterfaces;
+    use crate::models::Interfaces;
+
+    #[test]
+    fn list_ifaces() {
+        let ifaces = MockInterfaces::new();
+        assert_eq!(ifaces.all().unwrap().is_empty(), true);
+
+        let iface = ifaces.create("pepe").unwrap();
+        let all = ifaces.all().unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0], iface);
+
+        ifaces.delete("pepe").unwrap();
+        assert_eq!(ifaces.all().unwrap().is_empty(), true);
+    }
+
+    #[test]
+    fn no_dups() {
+        let ifaces = MockInterfaces::new();
+        ifaces.create("pepe").unwrap();
+
+        let err = ifaces.create("pepe").unwrap_err();
+        assert_eq!(err, "pepe: Already exists");
+    }
+
+    #[test]
+    fn delete_missing() {
+        let ifaces = MockInterfaces::new();
+        assert_eq!(ifaces.delete("pepe").unwrap(), false);
+
+        ifaces.create("pepe").unwrap();
+        assert_eq!(ifaces.delete("pepe").unwrap(), true);
+
+        assert_eq!(ifaces.delete("pepe").unwrap(), false);
+    }
 
     #[tokio::test]
     async fn test_list() {

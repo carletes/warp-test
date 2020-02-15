@@ -1,6 +1,6 @@
 use nix::ifaddrs::getifaddrs;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Interface {
     name: String,
     addr: String,
@@ -9,8 +9,8 @@ pub struct Interface {
 
 pub trait Interfaces {
     fn all(&self) -> Result<Vec<Interface>, String>;
-    fn create(&mut self, name: &str) -> Result<Interface, String>;
-    fn delete(&mut self, name: &str) -> Result<bool, String>;
+    fn create(&self, name: &str) -> Result<Interface, String>;
+    fn delete(&self, name: &str) -> Result<bool, String>;
     fn get(&self, name: &str) -> Result<Option<Interface>, String>;
     fn modify(&self, iface: Interface) -> Result<bool, String>;
 }
@@ -37,11 +37,11 @@ impl Interfaces for SystemInterfaces {
         }
     }
 
-    fn create(&mut self, name: &str) -> Result<Interface, String> {
+    fn create(&self, name: &str) -> Result<Interface, String> {
         Err(format!("TODO: ip link create {}", name))
     }
 
-    fn delete(&mut self, name: &str) -> Result<bool, String> {
+    fn delete(&self, name: &str) -> Result<bool, String> {
         Err(format!("TODO: ip link delete {}", name))
     }
 
@@ -80,27 +80,28 @@ impl Interfaces for SystemInterfaces {
 
 pub mod test {
     use super::{Interface, Interfaces};
+    use std::cell::RefCell;
     use std::collections::HashMap;
 
     pub struct MockInterfaces {
-        ifaces: HashMap<String, Interface>,
+        ifaces: RefCell<HashMap<String, Interface>>,
     }
 
     impl MockInterfaces {
         pub fn new() -> MockInterfaces {
             MockInterfaces {
-                ifaces: HashMap::with_capacity(10),
+                ifaces: RefCell::new(HashMap::with_capacity(10)),
             }
         }
     }
 
     impl Interfaces for MockInterfaces {
         fn all(&self) -> Result<Vec<Interface>, String> {
-            Ok(self.ifaces.values().cloned().collect())
+            Ok(self.ifaces.borrow().values().cloned().collect())
         }
 
-        fn create(&mut self, name: &str) -> Result<Interface, String> {
-            if self.ifaces.contains_key(name) {
+        fn create(&self, name: &str) -> Result<Interface, String> {
+            if self.ifaces.borrow().contains_key(name) {
                 Err(format!("{}: Already exists", name))
             } else {
                 let k = String::from(name);
@@ -110,20 +111,20 @@ pub mod test {
                     netmask: "255.0.0.0".to_string(),
                 };
                 let ret = iface.clone();
-                self.ifaces.insert(k, iface);
+                self.ifaces.borrow_mut().insert(k, iface);
                 Ok(ret)
             }
         }
 
-        fn delete(&mut self, name: &str) -> Result<bool, String> {
-            match self.ifaces.remove(name) {
+        fn delete(&self, name: &str) -> Result<bool, String> {
+            match self.ifaces.borrow_mut().remove(name) {
                 Some(_) => Ok(true),
                 None => Ok(false),
             }
         }
 
         fn get(&self, name: &str) -> Result<Option<Interface>, String> {
-            match self.ifaces.get(name) {
+            match self.ifaces.borrow().get(name) {
                 Some(iface) => Ok(Some(iface.clone())),
                 None => Ok(None),
             }
