@@ -1,6 +1,9 @@
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use warp::Filter;
 
 mod filters;
+mod handlers;
 mod models;
 
 #[tokio::main]
@@ -10,12 +13,12 @@ async fn main() {
     // GET /health => Empty 200 response.
     let health = warp::get().and(warp::path("health").map(|| "").and(warp::path::end()));
 
-    let ifaces = models::SystemInterfaces::new();
+    let ifaces = Arc::new(Mutex::new(models::SystemInterfaces::new()));
 
     let links = warp::path("links").and(
         filters::links::create()
             .or(filters::links::detail())
-            .or(filters::links::list())
+            .or(filters::links::list(ifaces.clone()))
             .or(filters::links::modify()),
     );
 

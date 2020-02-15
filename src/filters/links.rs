@@ -1,8 +1,15 @@
+use crate::handlers::interfaces;
+use crate::models::Interfaces;
 use warp::{Filter, Rejection, Reply};
 
 // GET /links => JSON list of links
-pub fn list() -> impl Filter<Extract = impl Reply, Error = Rejection> + Copy {
-    warp::get().and(warp::path::end()).map(|| "[1, 2, 3]")
+pub fn list<T: Interfaces + Send>(
+    ifaces: Arc<Mutex<T>>,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::get()
+        .and(warp::path::end())
+        .and(with_ifaces(ifaces))
+        .and_then(interfaces::list)
 }
 
 // GET /links/<name> => JSON object or 404.
@@ -28,44 +35,57 @@ pub fn modify() -> impl Filter<Extract = impl Reply, Error = Rejection> + Copy {
         .map(|_name: String, _body: String| "")
 }
 
+// fn with_db(db: Db) -> impl Filter<Extract = (Db,), Error = std::convert::Infallible> + Clone {
+//     warp::any().map(move || db.clone())
+// }
+
+use std::convert::Infallible;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+fn with_ifaces<T: Interfaces + Send>(
+    ifaces: Arc<Mutex<T>>,
+) -> impl Filter<Extract = (Arc<Mutex<T>>,), Error = Infallible> + Clone {
+    warp::any().map(move || ifaces.clone())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::test::MockInterfaces;
-    use crate::models::Interfaces;
+    use crate::models::test;
 
     #[test]
     fn list_ifaces() {
-        let ifaces = MockInterfaces::new();
+        let ifaces = test::interfaces();
         assert_eq!(ifaces.all().unwrap().is_empty(), true);
 
-        let iface = ifaces.create("pepe").unwrap();
+        let iface = ifaces.create("lo").unwrap();
         let all = ifaces.all().unwrap();
         assert_eq!(all.len(), 1);
         assert_eq!(all[0], iface);
 
-        ifaces.delete("pepe").unwrap();
+        ifaces.delete("lo").unwrap();
         assert_eq!(ifaces.all().unwrap().is_empty(), true);
     }
 
     #[test]
     fn no_dups() {
-        let ifaces = MockInterfaces::new();
-        ifaces.create("pepe").unwrap();
+        let ifaces = test::interfaces();
+        ifaces.create("lo").unwrap();
 
-        let err = ifaces.create("pepe").unwrap_err();
-        assert_eq!(err, "pepe: Already exists");
+        let err = ifaces.create("lo").unwrap_err();
+        assert_eq!(err, "lo: Already exists");
     }
 
     #[test]
     fn delete_missing() {
-        let ifaces = MockInterfaces::new();
-        assert_eq!(ifaces.delete("pepe").unwrap(), false);
+        let ifaces = test::interfaces();
+        assert_eq!(ifaces.delete("lo").unwrap(), false);
 
-        ifaces.create("pepe").unwrap();
-        assert_eq!(ifaces.delete("pepe").unwrap(), true);
+        ifaces.create("lo").unwrap();
+        assert_eq!(ifaces.delete("lo").unwrap(), true);
 
-        assert_eq!(ifaces.delete("pepe").unwrap(), false);
+        assert_eq!(ifaces.delete("lo").unwrap(), false);
     }
 
     #[tokio::test]

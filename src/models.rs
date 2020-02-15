@@ -83,16 +83,8 @@ pub mod test {
     use std::cell::RefCell;
     use std::collections::HashMap;
 
-    pub struct MockInterfaces {
+    struct MockInterfaces {
         ifaces: RefCell<HashMap<String, Interface>>,
-    }
-
-    impl MockInterfaces {
-        pub fn new() -> MockInterfaces {
-            MockInterfaces {
-                ifaces: RefCell::new(HashMap::with_capacity(10)),
-            }
-        }
     }
 
     impl Interfaces for MockInterfaces {
@@ -133,5 +125,11 @@ pub mod test {
         fn modify(&self, iface: Interface) -> Result<bool, String> {
             Err(format!("TODO: ip link modify {:?}", iface))
         }
+    }
+
+    pub fn interfaces() -> Box<dyn Interfaces> {
+        Box::new(MockInterfaces {
+            ifaces: RefCell::new(HashMap::with_capacity(10)),
+        })
     }
 }
