@@ -103,19 +103,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_detail() {
-        let f = detail();
+        let ifaces = test::interfaces();
+        let f = detail(ifaces);
 
         let res = warp::test::request()
             .method("GET")
             .path("/foo")
-            .reply(&f)
-            .await;
-        assert_eq!(res.status(), 200);
-        assert_eq!(res.body(), "id: foo");
-
-        let res = warp::test::request()
-            .method("GET")
-            .path("/foo/bar")
             .reply(&f)
             .await;
         assert_eq!(res.status(), 404);
