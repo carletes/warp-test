@@ -1,7 +1,8 @@
 use nix::ifaddrs::getifaddrs;
 use nix::sys::socket::{InetAddr, SockAddr};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Interface {
     name: String,
     addr: String,

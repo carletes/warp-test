@@ -10,7 +10,13 @@ pub mod interfaces {
     pub async fn list(ifaces: Arc<Mutex<impl Interfaces>>) -> Result<impl Reply, Infallible> {
         let ifaces = ifaces.lock().await;
 
-        Ok(format!("{:?}", ifaces.all()))
+        match ifaces.all() {
+            Ok(ifaces) => Ok(reply::with_status(reply::json(&ifaces), StatusCode::OK)),
+            Err(err) => Ok(reply::with_status(
+                reply::json(&err),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )),
+        }
     }
 
     pub async fn get(
@@ -20,10 +26,14 @@ pub mod interfaces {
         let ifaces = ifaces.lock().await;
 
         match ifaces.get(&name) {
-            Ok(Some(iface)) => Ok(reply::with_status(format!("{:?}", iface), StatusCode::OK)),
-            Ok(None) => Ok(reply::with_status("".to_string(), StatusCode::NOT_FOUND)),
+            // Ok(Some(iface)) => Ok(reply::with_status(format!("{:?}", iface), StatusCode::OK)),
+            Ok(Some(iface)) => Ok(reply::with_status(reply::json(&iface), StatusCode::OK)),
+            Ok(None) => Ok(reply::with_status(
+                reply::json(&name),
+                StatusCode::NOT_FOUND,
+            )),
             Err(err) => Ok(reply::with_status(
-                format!("{:?}", err),
+                reply::json(&err),
                 StatusCode::INTERNAL_SERVER_ERROR,
             )),
         }
