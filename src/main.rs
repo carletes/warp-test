@@ -16,7 +16,7 @@ async fn main() {
     let ifaces = Arc::new(Mutex::new(models::SystemInterfaces::new()));
 
     let links = warp::path("links").and(
-        filters::links::create()
+        filters::links::create(ifaces.clone())
             .or(filters::links::detail(ifaces.clone()))
             .or(filters::links::list(ifaces.clone()))
             .or(filters::links::modify()),

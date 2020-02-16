@@ -9,6 +9,12 @@ pub struct Interface {
     netmask: String,
 }
 
+impl Interface {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 pub trait Interfaces {
     fn all(&self) -> Result<Vec<Interface>, String>;
     fn create(&self, name: &str) -> Result<Interface, String>;

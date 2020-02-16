@@ -26,11 +26,14 @@ pub fn detail(
 }
 
 // POST /links {JSON body} => Empty response.
-pub fn create() -> impl Filter<Extract = impl Reply, Error = Rejection> + Copy {
+pub fn create(
+    ifaces: Arc<Mutex<impl Interfaces + Send>>,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::post()
         .and(warp::path::end())
         .and(warp::body::json())
-        .map(|_body: String| "")
+        .and(with_ifaces(ifaces))
+        .and_then(interfaces::create)
 }
 
 // PATCH /links/<name> {JSON body} => JSON object or 404.
@@ -87,30 +90,65 @@ mod tests {
     // }
 
     #[tokio::test]
-    async fn test_list() {
+    async fn no_interfaces() {
         let ifaces = test::interfaces();
-        let f = list(ifaces);
+        let f = list(ifaces.clone());
 
         let res = warp::test::request()
             .method("GET")
             .path("/")
             .reply(&f)
             .await;
-
         assert_eq!(res.status(), 200);
-        assert_eq!(res.body(), "Ok([])");
+        assert_eq!(res.body(), "[]");
     }
 
     #[tokio::test]
-    async fn test_detail() {
+    async fn some_interfaces() {
         let ifaces = test::interfaces();
-        let f = detail(ifaces);
+        let f = list(ifaces.clone());
+
+        ifaces.lock().await.create("lo").unwrap();
+        let res = warp::test::request()
+            .method("GET")
+            .path("/")
+            .reply(&f)
+            .await;
+        assert_eq!(res.status(), 200);
+        assert_eq!(
+            res.body(),
+            "[{\"name\":\"lo\",\"addr\":\"127.0.0.1\",\"netmask\":\"255.0.0.0\"}]"
+        );
+    }
+
+    #[tokio::test]
+    async fn unknown_interface_detail() {
+        let ifaces = test::interfaces();
+        let f = detail(ifaces.clone());
 
         let res = warp::test::request()
             .method("GET")
-            .path("/foo")
+            .path("/lo")
             .reply(&f)
             .await;
         assert_eq!(res.status(), 404);
+    }
+
+    #[tokio::test]
+    async fn interface_detail() {
+        let ifaces = test::interfaces();
+        let f = detail(ifaces.clone());
+
+        ifaces.lock().await.create("lo").unwrap();
+        let res = warp::test::request()
+            .method("GET")
+            .path("/lo")
+            .reply(&f)
+            .await;
+        assert_eq!(res.status(), 200);
+        assert_eq!(
+            res.body(),
+            "{\"name\":\"lo\",\"addr\":\"127.0.0.1\",\"netmask\":\"255.0.0.0\"}"
+        );
     }
 }
