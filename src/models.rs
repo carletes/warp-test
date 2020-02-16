@@ -1,4 +1,5 @@
 use nix::ifaddrs::getifaddrs;
+use nix::sys::socket::{InetAddr, SockAddr};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Interface {
@@ -23,14 +24,22 @@ impl SystemInterfaces {
     }
 }
 
+fn is_ipv4_addr(addr: &Option<SockAddr>) -> bool {
+    match addr {
+        Some(SockAddr::Inet(InetAddr::V4(_))) => true,
+        _ => false,
+    }
+}
+
 impl Interfaces for SystemInterfaces {
     fn all(&self) -> Result<Vec<Interface>, String> {
         match getifaddrs() {
             Ok(addrs) => Ok(addrs
+                .filter(|addr| is_ipv4_addr(&addr.address))
                 .map(|addr| Interface {
                     name: addr.interface_name,
-                    addr: "127.0.0.1".to_string(),
-                    netmask: "255.0.0.0".to_string(),
+                    addr: addr.address.unwrap().to_str(),
+                    netmask: addr.netmask.unwrap().to_str(),
                 })
                 .collect()),
             Err(err) => Err(format!("getifaddrs() failed: {}", err)),
@@ -48,23 +57,13 @@ impl Interfaces for SystemInterfaces {
     fn get(&self, name: &str) -> Result<Option<Interface>, String> {
         match getifaddrs() {
             Ok(addrs) => {
-                for ifaddr in addrs {
+                for ifaddr in addrs.filter(|addr| is_ipv4_addr(&addr.address)) {
                     if ifaddr.interface_name == name {
-                        match (ifaddr.address, ifaddr.netmask) {
-                            (Some(address), Some(netmask)) => {
-                                return Ok(Some(Interface {
-                                    name: ifaddr.interface_name,
-                                    addr: address.to_string(),
-                                    netmask: netmask.to_str(),
-                                }))
-                            }
-                            (_, _) => {
-                                return Err(format!(
-                                    "Unknown type of address/netmask for interface {}",
-                                    name
-                                ))
-                            }
-                        }
+                        return Ok(Some(Interface {
+                            name: ifaddr.interface_name,
+                            addr: ifaddr.address.unwrap().to_str(),
+                            netmask: ifaddr.netmask.unwrap().to_str(),
+                        }));
                     }
                 }
                 Ok(None)

@@ -16,10 +16,13 @@ pub fn list(
 }
 
 // GET /links/<name> => JSON object or 404.
-pub fn detail() -> impl Filter<Extract = (String,), Error = Rejection> + Copy {
+pub fn detail(
+    ifaces: Arc<Mutex<impl Interfaces + Send>>,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::get()
-        .and(warp::path::param().and(warp::path::end()))
-        .map(|name: String| format!("id: {}", name))
+        .and(warp::path!(String))
+        .and(with_ifaces(ifaces))
+        .and_then(interfaces::get)
 }
 
 // POST /links {JSON body} => Empty response.
