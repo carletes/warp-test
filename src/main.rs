@@ -2,9 +2,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use warp::Filter;
 
-mod filters;
-mod handlers;
-mod models;
+use crate::{filters, models};
 
 #[tokio::main]
 async fn main() {
