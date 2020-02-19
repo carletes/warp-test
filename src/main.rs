@@ -17,6 +17,7 @@ async fn main() {
 
     let links = warp::path("links").and(
         filters::links::create(ifaces.clone())
+            .or(filters::links::delete(ifaces.clone()))
             .or(filters::links::detail(ifaces.clone()))
             .or(filters::links::list(ifaces.clone()))
             .or(filters::links::modify()),

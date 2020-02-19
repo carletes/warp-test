@@ -7,6 +7,25 @@ pub mod interfaces {
     use warp::reply;
     use warp::Reply;
 
+    pub async fn delete(
+        name: String,
+        ifaces: Arc<Mutex<impl Interfaces>>,
+    ) -> Result<impl Reply, Infallible> {
+        let ifaces = ifaces.lock().await;
+
+        match ifaces.delete(&name) {
+            Ok(true) => Ok(reply::with_status(reply::json(&true), StatusCode::OK)),
+            Ok(false) => Ok(reply::with_status(
+                reply::json(&false),
+                StatusCode::NOT_FOUND,
+            )),
+            Err(err) => Ok(reply::with_status(
+                reply::json(&err),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )),
+        }
+    }
+
     pub async fn list(ifaces: Arc<Mutex<impl Interfaces>>) -> Result<impl Reply, Infallible> {
         let ifaces = ifaces.lock().await;
 

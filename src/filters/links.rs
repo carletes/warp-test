@@ -15,6 +15,16 @@ pub fn list(
         .and_then(interfaces::list)
 }
 
+// DELTE /links/<name> => JSON bool, 200 or 404
+pub fn delete(
+    ifaces: Arc<Mutex<impl Interfaces + Send>>,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::delete()
+        .and(warp::path!(String))
+        .and(with_ifaces(ifaces))
+        .and_then(interfaces::delete)
+}
+
 // GET /links/<name> => JSON object or 404.
 pub fn detail(
     ifaces: Arc<Mutex<impl Interfaces + Send>>,
@@ -56,37 +66,12 @@ mod tests {
     use crate::models::test;
 
     // #[test]
-    // fn list_ifaces() {
-    //     let ifaces = test::interfaces();
-    //     assert_eq!(ifaces.all().unwrap().is_empty(), true);
-
-    //     let iface = ifaces.create("lo").unwrap();
-    //     let all = ifaces.all().unwrap();
-    //     assert_eq!(all.len(), 1);
-    //     assert_eq!(all[0], iface);
-
-    //     ifaces.delete("lo").unwrap();
-    //     assert_eq!(ifaces.all().unwrap().is_empty(), true);
-    // }
-
-    // #[test]
     // fn no_dups() {
     //     let ifaces = test::interfaces();
     //     ifaces.create("lo").unwrap();
 
     //     let err = ifaces.create("lo").unwrap_err();
     //     assert_eq!(err, "lo: Already exists");
-    // }
-
-    // #[test]
-    // fn delete_missing() {
-    //     let ifaces = test::interfaces();
-    //     assert_eq!(ifaces.delete("lo").unwrap(), false);
-
-    //     ifaces.create("lo").unwrap();
-    //     assert_eq!(ifaces.delete("lo").unwrap(), true);
-
-    //     assert_eq!(ifaces.delete("lo").unwrap(), false);
     // }
 
     #[tokio::test]
@@ -150,5 +135,47 @@ mod tests {
             res.body(),
             "{\"name\":\"lo\",\"addr\":\"127.0.0.1\",\"netmask\":\"255.0.0.0\"}"
         );
+    }
+
+    #[tokio::test]
+    async fn delete_interface() {
+        let ifaces = test::interfaces();
+        let f = detail(ifaces.clone());
+
+        ifaces.lock().await.create("lo").unwrap();
+        let res = warp::test::request()
+            .method("GET")
+            .path("/lo")
+            .reply(&f)
+            .await;
+        assert_eq!(res.status(), 200);
+
+        let f = delete(ifaces.clone());
+        let res = warp::test::request()
+            .method("DELETE")
+            .path("/lo")
+            .reply(&f)
+            .await;
+        assert_eq!(res.status(), 200);
+
+        let f = detail(ifaces.clone());
+        let res = warp::test::request()
+            .method("GET")
+            .path("/lo")
+            .reply(&f)
+            .await;
+        assert_eq!(res.status(), 404);
+    }
+
+    #[tokio::test]
+    async fn delete_unknown_interface() {
+        let ifaces = test::interfaces();
+        let f = delete(ifaces.clone());
+        let res = warp::test::request()
+            .method("DELETE")
+            .path("/no-such-iface")
+            .reply(&f)
+            .await;
+        assert_eq!(res.status(), 404);
     }
 }
