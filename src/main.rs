@@ -26,3 +26,6 @@ async fn main() {
     let routes = health.or(links);
     warp::serve(routes).run(([0, 0, 0, 0], 8000)).await;
 }
+
+#[cfg(test)]
+mod tests;
